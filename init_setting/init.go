@@ -47,7 +47,7 @@ func main() {
 	usersCollection := client.Database("socialdb").Collection("users")
 
 	database := os.Getenv("DATABASE_NAME")
-	usersCollection := client.Database(database).Collection("users")
+	usersCollection = client.Database(database).Collection("users")
 	fmt.Println(usersCollection)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

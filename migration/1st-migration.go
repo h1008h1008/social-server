@@ -2,8 +2,11 @@ package migration
 
 import (
 	"context"
+	"log"
+	"os"
 	"time"
 
+	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -12,7 +15,11 @@ import (
 func CreateIndexes(client *mongo.Client) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	usersCollection := client.Database("socialdb").Collection("users")
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("Error loading .env file")
+	}
+	database := os.Getenv("DATABASE_NAME")
+	usersCollection := client.Database(database).Collection("users")
 	_, err := usersCollection.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{
 			Keys:    bson.M{"email": 1},
@@ -27,14 +34,14 @@ func CreateIndexes(client *mongo.Client) error {
 		return err
 	}
 
-	postsCollection := client.Database("socialdb").Collection("posts")
+	postsCollection := client.Database(database).Collection("posts")
 	_, err = postsCollection.Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys: bson.M{"authorId": 1},
 	})
 	if err != nil {
 		return err
 	}
-	commentsCollection := client.Database("socialdb").Collection("comments")
+	commentsCollection := client.Database(database).Collection("comments")
 	_, err = commentsCollection.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{
 			Keys: bson.M{"postId": 1},
@@ -47,7 +54,7 @@ func CreateIndexes(client *mongo.Client) error {
 		return err
 	}
 
-	friendshipsCollection := client.Database("socialdb").Collection("friendships")
+	friendshipsCollection := client.Database(database).Collection("friendships")
 	_, err = friendshipsCollection.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{
 			Keys:    bson.D{{Key: "userId1", Value: 1}, {Key: "userId2", Value: 1}},
@@ -59,7 +66,7 @@ func CreateIndexes(client *mongo.Client) error {
 	}
 
 	// Indexes for Messages collection
-	messagesCollection := client.Database("socialdb").Collection("messages")
+	messagesCollection := client.Database(database).Collection("messages")
 	_, err = messagesCollection.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{
 			Keys: bson.M{"senderUserId": 1},
@@ -81,10 +88,13 @@ func CreateIndexes(client *mongo.Client) error {
 func EnsureCollections(client *mongo.Client) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("Error loading .env file")
+	}
+	database := os.Getenv("DATABASE_NAME")
 	collectionsToCreate := []string{"users", "posts", "comments", "friendships", "messages"}
 	for _, coll := range collectionsToCreate {
-		err := client.Database("socialdb").CreateCollection(ctx, coll)
+		err := client.Database(database).CreateCollection(ctx, coll)
 		if err != nil {
 			if mongo.IsDuplicateKeyError(err) {
 				continue
